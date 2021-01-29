@@ -32,9 +32,9 @@ Features
 
 Run with:
 
-```bash
+`
 uvicorn goaldsl_api:http_api --reload --port 8000
-```
+`
 
 Look at https://www.uvicorn.org/ for more information about the Uvicorn
 ASGI server and how to use it.
