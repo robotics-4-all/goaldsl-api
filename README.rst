@@ -30,12 +30,11 @@ Web API for goal-dsl
 Features
 --------
 
-* TODO
+Run with:
 
-Credits
--------
+```bash
+uvicorn goaldsl_api:http_api --reload --port 8000
+```
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+Look [here](https://www.uvicorn.org/) for more information about the Uvicorn
+ASGI server and how to use it.

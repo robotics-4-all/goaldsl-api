@@ -21,20 +21,23 @@ async def root():
 async def validate_file(file: UploadFile = File(...)):
     print(f'Validation for request: file=<{file.filename}>,' + \
           f' descriptor=<{file.file}>')
-    fd = file.file
-    u_id = uuid.uuid4().hex[0:8]
-    fpath = os.path.join(
-        '/tmp',
-        'model_for_validation-{}.goal'.format(u_id)
-    )
-    with open(fpath, 'w') as f:
-        f.write(str(fd.read()))
-    fd.write(fd.read())
-    model, _ = build_model(fpath)
     resp = {
         'status': 200,
         'message': ''
     }
+    fd = file.file
+    u_id = uuid.uuid4().hex[0:8]
+    fpath = os.path.join(
+        '/tmp',
+        'model_for_validation.goal'
+    )
+    with open(fpath, 'w') as f:
+        f.write(fd.read().decode('utf8'))
+    try:
+        model, _ = build_model(fpath)
+    except Exception as e:
+        resp['status'] = 404
+        resp['message'] = e
     return resp
 
 @http_api.get("/validate/base64")
