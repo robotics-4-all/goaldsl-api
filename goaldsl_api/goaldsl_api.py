@@ -3,13 +3,15 @@
 import uuid
 import os
 import base64
-
 from typing import Optional
 
-from goal_dsl.utils import build_model
+import tarfile
 
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import HTMLResponse
+from goal_dsl.utils import build_model
+from goal_gen.generator import generate as generate_model
+
+from fastapi import FastAPI, File, UploadFile, status
+from fastapi.responses import HTMLResponse, FileResponse
 
 
 http_api = FastAPI()
@@ -64,7 +66,7 @@ async def validate_file(file: UploadFile = File(...)):
 
 
 @http_api.get("/validate/base64")
-async def validate_b63(fenc: str = ''):
+async def validate_b64(fenc: str = ''):
     if len(fenc) == 0:
         return 404
     resp = {
@@ -85,3 +87,45 @@ async def validate_b63(fenc: str = ''):
         resp['status'] = 404
         resp['message'] = e
     return resp
+
+
+@http_api.post("/generate")
+async def generate(model_file: UploadFile = File(...)):
+    print(f'Generate for request: file=<{model_file.filename}>,' + \
+          f' descriptor=<{model_file.file}>')
+    resp = {
+        'status': 200,
+        'message': ''
+    }
+    fd = model_file.file
+    u_id = uuid.uuid4().hex[0:8]
+    model_path = os.path.join(
+        '/tmp',
+        f'model-{u_id}.goal'
+    )
+    tarball_path = os.path.join(
+        '/tmp',
+        f'{u_id}.tar.gz'
+    )
+    gen_path = os.path.join(
+        '/tmp',
+        f'gen-{u_id}'
+    )
+    with open(model_path, 'w') as f:
+        f.write(fd.read().decode('utf8'))
+    try:
+        out_dir = generate_model(model_path, gen_path)
+        make_tarball(tarball_path, out_dir)
+        print(f'Sending tarball {tarball_path}')
+        return FileResponse(tarball_path,
+                            filename=os.path.basename(tarball_path),
+                            media_type='application/x-tar')
+    except Exception as e:
+        print(e)
+        resp['status'] = 404
+        return resp
+
+
+def make_tarball(fout, source_dir):
+    with tarfile.open(fout, "w:gz") as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir))
