@@ -4,6 +4,7 @@ import uuid
 import os
 import base64
 from typing import Optional
+import subprocess
 
 import tarfile
 
@@ -13,8 +14,18 @@ from goal_gen.generator import generate as generate_model
 from fastapi import FastAPI, File, UploadFile, status
 from fastapi.responses import HTMLResponse, FileResponse
 
+import docker
+
+docker_client = docker.from_env()
 
 http_api = FastAPI()
+
+
+TMP_DIR = '/tmp/goaldsl'
+
+
+if not os.path.exists(TMP_DIR):
+    os.mkdir(TMP_DIR)
 
 
 @http_api.get("/", response_class=HTMLResponse)
@@ -52,7 +63,7 @@ async def validate_file(file: UploadFile = File(...)):
     fd = file.file
     u_id = uuid.uuid4().hex[0:8]
     fpath = os.path.join(
-        '/tmp',
+        TMP_DIR,
         f'model_for_validation-{u_id}.goal'
     )
     with open(fpath, 'w') as f:
@@ -76,7 +87,7 @@ async def validate_b64(fenc: str = ''):
     fdec = base64.b64decode(fenc)
     u_id = uuid.uuid4().hex[0:8]
     fpath = os.path.join(
-        '/tmp',
+        TMP_DIR,
         'model_for_validation-{}.goal'.format(u_id)
     )
     with open(fpath, 'wb') as f:
@@ -100,15 +111,15 @@ async def generate(model_file: UploadFile = File(...)):
     fd = model_file.file
     u_id = uuid.uuid4().hex[0:8]
     model_path = os.path.join(
-        '/tmp',
+        TMP_DIR,
         f'model-{u_id}.goal'
     )
     tarball_path = os.path.join(
-        '/tmp',
+        TMP_DIR,
         f'{u_id}.tar.gz'
     )
     gen_path = os.path.join(
-        '/tmp',
+        TMP_DIR,
         f'gen-{u_id}'
     )
     with open(model_path, 'w') as f:
@@ -124,6 +135,69 @@ async def generate(model_file: UploadFile = File(...)):
         print(e)
         resp['status'] = 404
         return resp
+
+
+@http_api.post("/execute")
+async def execute(model_file: UploadFile = File(...),
+              container: str = 'subprocess'):
+    print(f'Run/Execute for request: file=<{model_file.filename}>,' + \
+          f' descriptor=<{model_file.file}>')
+    resp = {
+        'status': 200,
+        'message': ''
+    }
+    fd = model_file.file
+    u_id = uuid.uuid4().hex[0:8]
+    model_path = os.path.join(
+        TMP_DIR,
+        f'model-{u_id}.goal'
+    )
+    gen_path = os.path.join(
+        TMP_DIR,
+        f'gen-{u_id}'
+    )
+    with open(model_path, 'w') as f:
+        f.write(fd.read().decode('utf8'))
+    try:
+        out_dir = generate_model(model_path, gen_path)
+        if container == 'docker':
+            img = build_docker_image(out_dir)
+            print('Executing within Container...')
+            container = run_container(img.id, u_id)
+            print('Goal-Checker Container created - [{}:{}]'.format(
+                container.name, container.id))
+        elif container == 'subprocess':
+            exec_path = os.path.join(out_dir, 'goal_checker.py')
+            run_subprocess(exec_path)
+    except Exception as e:
+        print(e)
+        resp['status'] = 404
+    return resp
+
+
+def run_subprocess(exec_path):
+    # cmd = f'python3 {exec_path}'
+    # response = subprocess.run(cmd,
+    #                       shell=True,
+    #                       stderr=subprocess.PIPE)
+    # print(response.stderr)
+    pid = subprocess.Popen(['python3', exec_path], close_fds=True)
+
+
+def run_container(img_id, u_id):
+    container = docker_client.containers.run(
+        img_id,
+        name=f'goalT-{u_id}',
+        detach=True,
+        network_mode='host',
+    )
+    return container
+
+
+def build_docker_image(dpath: str):
+    img, logs = docker_client.images.build(path=dpath)
+    print(logs)
+    return img
 
 
 def make_tarball(fout, source_dir):
