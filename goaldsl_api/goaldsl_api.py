@@ -139,7 +139,8 @@ async def generate(model_file: UploadFile = File(...)):
 
 @http_api.post("/execute")
 async def execute(model_file: UploadFile = File(...),
-              container: str = 'subprocess'):
+                  container: str = 'subprocess',
+                  wait: bool = False):
     print(f'Run/Execute for request: file=<{model_file.filename}>,' + \
           f' descriptor=<{model_file.file}>')
     resp = {
@@ -168,7 +169,10 @@ async def execute(model_file: UploadFile = File(...),
                 container.name, container.id))
         elif container == 'subprocess':
             exec_path = os.path.join(out_dir, 'goal_checker.py')
-            run_subprocess(exec_path)
+            pid = run_subprocess(exec_path)
+            if wait:
+                pid.wait()
+
     except Exception as e:
         print(e)
         resp['status'] = 404
@@ -176,12 +180,8 @@ async def execute(model_file: UploadFile = File(...),
 
 
 def run_subprocess(exec_path):
-    # cmd = f'python3 {exec_path}'
-    # response = subprocess.run(cmd,
-    #                       shell=True,
-    #                       stderr=subprocess.PIPE)
-    # print(response.stderr)
     pid = subprocess.Popen(['python3', exec_path], close_fds=True)
+    return pid
 
 
 def run_container(img_id, u_id):
