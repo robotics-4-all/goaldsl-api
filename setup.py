@@ -10,9 +10,9 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+requirements = [ 'aiofiles', 'python-multipart', 'fastapi' ]
 
-setup_requirements = [ 'aiofiles' ]
+setup_requirements = [ ]
 
 test_requirements = [ ]
 

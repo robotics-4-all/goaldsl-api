@@ -14,10 +14,6 @@ from goal_gen.generator import generate as generate_model
 from fastapi import FastAPI, File, UploadFile, status
 from fastapi.responses import HTMLResponse, FileResponse
 
-import docker
-
-docker_client = docker.from_env()
-
 http_api = FastAPI()
 
 
@@ -161,18 +157,13 @@ async def execute(model_file: UploadFile = File(...),
         f.write(fd.read().decode('utf8'))
     try:
         out_dir = generate_model(model_path, gen_path)
-        if container == 'docker':
-            img = build_docker_image(out_dir)
-            print('Executing within Container...')
-            container = run_container(img.id, u_id)
-            print('Goal-Checker Container created - [{}:{}]'.format(
-                container.name, container.id))
-        elif container == 'subprocess':
+        if container == 'subprocess':
             exec_path = os.path.join(out_dir, 'goal_checker.py')
             pid = run_subprocess(exec_path)
             if wait:
                 pid.wait()
-
+        else:
+            raise ValueError()
     except Exception as e:
         print(e)
         resp['status'] = 404

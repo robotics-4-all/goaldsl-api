@@ -18,7 +18,7 @@ pip install .
 Run with:
 
 `
-uvicorn goaldsl_api:http_api --reload --port 8000
+uvicorn goaldsl_api:http_api --reload --port 8080
 `
 
 Look at https://www.uvicorn.org/ for more information about the Uvicorn
@@ -40,10 +40,23 @@ docker build -t goaldsl-api .
 docker run -it -p 8080:80 goaldsl-api
 ```
 
+or 
+
+```
+docker run -it --network=host goaldsl-api
+```
+
+to also enable execution of goal checkers.
+
 # API Endpoints
 
 `GET /validate/base64`
 
 `POST /validate/file`
 
-Deploy and go to `http://localhost:8000/docs` for more information.
+`POST /generate`
+
+`POST /execute`
+
+
+Deploy and go to `http://localhost:8080/docs` for more information.
