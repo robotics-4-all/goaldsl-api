@@ -17,4 +17,4 @@ RUN cd /goalee && pip install .
 
 WORKDIR /app
 
-CMD ["uvicorn", "goaldsl_api:http_api", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "goaldsl_api:api", "--host", "0.0.0.0", "--port", "8080"]

@@ -18,7 +18,7 @@ pip install .
 Run with:
 
 `
-uvicorn goaldsl_api:http_api --reload --port 8080
+uvicorn goaldsl_api:api --reload --port 8080
 `
 
 Look at https://www.uvicorn.org/ for more information about the Uvicorn
